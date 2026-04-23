@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, type ChangeEvent } from 'react';
+import { useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import * as XLSX from 'xlsx';
 
 type ValorCelula = string | number | boolean | Date | null | undefined;
@@ -210,6 +210,7 @@ export default function DetectorVelocidade() {
   const [abaAnalisada, setAbaAnalisada] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [aProcessar, setAProcessar] = useState(false);
+  const [aArrastar, setAArrastar] = useState(false);
   const inputFicheiroRef = useRef<HTMLInputElement | null>(null);
 
   const limparConsulta = (): void => {
@@ -388,13 +389,7 @@ export default function DetectorVelocidade() {
     }
   };
 
-  const gerirCarregamento = (e: ChangeEvent<HTMLInputElement>): void => {
-    const ficheiro = e.target.files?.[0];
-
-    if (!ficheiro) {
-      return;
-    }
-
+  const carregarFicheiro = (ficheiro: File): void => {
     setFicheiroAtivo(ficheiro.name);
     setAbaAnalisada(null);
     setErro(null);
@@ -423,6 +418,42 @@ export default function DetectorVelocidade() {
     reader.readAsArrayBuffer(ficheiro);
   };
 
+  const gerirCarregamento = (e: ChangeEvent<HTMLInputElement>): void => {
+    const ficheiro = e.target.files?.[0];
+
+    if (!ficheiro) {
+      return;
+    }
+
+    carregarFicheiro(ficheiro);
+  };
+
+  const gerirArrastoSobre = (e: DragEvent<HTMLLabelElement>): void => {
+    e.preventDefault();
+    e.stopPropagation();
+    setAArrastar(true);
+  };
+
+  const gerirSaidaArrasto = (e: DragEvent<HTMLLabelElement>): void => {
+    e.preventDefault();
+    e.stopPropagation();
+    setAArrastar(false);
+  };
+
+  const gerirSoltarFicheiro = (e: DragEvent<HTMLLabelElement>): void => {
+    e.preventDefault();
+    e.stopPropagation();
+    setAArrastar(false);
+
+    const ficheiro = e.dataTransfer.files?.[0];
+
+    if (!ficheiro) {
+      return;
+    }
+
+    carregarFicheiro(ficheiro);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="mx-auto max-w-5xl space-y-8">
@@ -441,7 +472,17 @@ export default function DetectorVelocidade() {
           </p>
 
           <div className="mt-6 flex w-full items-center justify-center">
-            <label className="flex h-40 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-blue-300 bg-blue-50 transition-colors hover:bg-blue-100">
+            <label
+              onDragOver={gerirArrastoSobre}
+              onDragEnter={gerirArrastoSobre}
+              onDragLeave={gerirSaidaArrasto}
+              onDrop={gerirSoltarFicheiro}
+              className={`flex h-40 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors ${
+                aArrastar
+                  ? 'border-blue-500 bg-blue-100'
+                  : 'border-blue-300 bg-blue-50 hover:bg-blue-100'
+              }`}
+            >
               <div className="flex flex-col items-center justify-center pt-5 pb-6">
                 <svg
                   className="mb-3 h-10 w-10 text-blue-500"
@@ -464,6 +505,11 @@ export default function DetectorVelocidade() {
                 <p className="text-xs text-gray-500">
                   Apenas relatórios Infleet (.xlsx e .xls)
                 </p>
+                {aArrastar && (
+                  <p className="mt-2 text-xs font-semibold text-blue-700">
+                    Solte o arquivo aqui para iniciar a análise
+                  </p>
+                )}
               </div>
               <input
                 ref={inputFicheiroRef}
